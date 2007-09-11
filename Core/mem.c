@@ -497,6 +497,7 @@ void reset_memory(void)
 
 	eepromStatusEnable = FALSE;
 	memory_flash_command = FALSE;
+	interlace = 2;
 
 	memset(ram, 0, sizeof(ram));	//Clear ram
 

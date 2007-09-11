@@ -45,11 +45,12 @@
 
 //=============================================================================
 
-_u16 cfb[256*256];
+_u16* cfb;//[256*256];
 _u8 zbuffer[256];
 
 _u16* cfb_scanline;	//set = scanline * SCREEN_WIDTH
 _u8 scanline;
+_u8 interlace;
 
 _u8 winx = 0, winw = SCREEN_WIDTH;
 _u8 winy = 0, winh = SCREEN_HEIGHT;

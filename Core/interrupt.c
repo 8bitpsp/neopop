@@ -164,8 +164,11 @@ void updateTimers(_u8 cputicks)
 
 		// ============= END OF CURRENT SCANLINE =============
 
-		if (gfx_hack)	{	gfx_draw(); gfx_hint(); }
-		else			{	gfx_hint();	gfx_draw(); }
+		if( ( ram[0x8009] & 1 ) != interlace )
+		{
+			if (gfx_hack)	{	gfx_draw(); gfx_hint(); }
+			else			{	gfx_hint();	gfx_draw(); }
+		}
 
 		// ============= START OF NEXT SCANLINE =============
 
@@ -187,6 +190,12 @@ void updateTimers(_u8 cputicks)
 		//V_Int?
 		if (ram[0x8009] == SCREEN_HEIGHT)
 		{
+			if (frameskip_count == 0)
+				interlace ^= 1;		// Change Scanline
+
+			ram[0x8010] = 0x40;	//Character Over / Vblank Status
+			system_VBL();	//Update the screen
+
 			//Frameskip
 			frameskip_count = (frameskip_count + 1) % system_frameskip_key;
 

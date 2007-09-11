@@ -24,6 +24,15 @@
   History of changes:
   ===================
 
+06 JUL 2006 - PSmonkey
+=======================================
+- Optimised Rendering
+- Added fixed conversion table from 3bit to 16bit
+
+05 JUL 2006 - PSmonkey
+=======================================
+- Changed cfb offset to scanline * 256
+
 20 JUL 2002 - neopop_uk
 =======================================
 - Cleaned and tidied up for the source release
@@ -68,12 +77,18 @@
 
 //=============================================================================
 
+static _u16 uConvert3bTo16b[8] = {
+	0x0000, 0x0222, 0x0444, 0x0666, 0x0888, 0x0AAA, 0x0CCC, 0x0EEE,
+};
+
+//=============================================================================
+
 static void Plot(_u8 x, _u8* palette_ptr, _u16 pal_hi, _u8 index, _u8 depth)
 {
-	_u8 data8;
+	//_u8 data8;
 
-	//Clip
-	if (index == 0 || x < winx || x >= (winw + winx) || x >= SCREEN_WIDTH)
+	// Index & Depth check, <= to stop later sprites overwriting pixels!
+	if( ( index == 0 ) || ( depth <= zbuffer[x] ) )
 		return;
 
 	//Depth check, <= to stop later sprites overwriting pixels!
@@ -81,19 +96,27 @@ static void Plot(_u8 x, _u8* palette_ptr, _u16 pal_hi, _u8 index, _u8 depth)
 	zbuffer[x] = depth;
 
 	//Get the colour of the pixel
+	//if (pal_hi)
+	//	data8 = palette_ptr[4 + index];
+	//else
+	//	data8 = palette_ptr[0 + index];
+
 	if (pal_hi)
-		data8 = palette_ptr[4 + index];
+		cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[4 + index] & 7 ];
 	else
-		data8 = palette_ptr[0 + index];
+		cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[0 + index] & 7 ];
 
-	r = (data8 & 7) << 1;
-	g = (data8 & 7) << 5;
-	b = (data8 & 7) << 9;
+//	r = (data8 & 7) << 1;
+//	g = (data8 & 7) << 5;
+//	b = (data8 & 7) << 9;
 
-	if (negative)
-		cfb_scanline[x] = (r | g | b);
-	else
-		cfb_scanline[x] = ~(r | g | b);
+	if (!negative)
+		cfb_scanline[x] = ~cfb_scanline[x];
+
+	//if (negative)
+	//	cfb_scanline[x] = (r | g | b);
+	//else
+	//	cfb_scanline[x] = ~(r | g | b);
 }
 
 static void drawPattern(_u8 screenx, _u16 tile, _u8 tiley, _u16 mirror, 
@@ -177,26 +200,36 @@ void gfx_draw_scanline_mono(void)
 
 	//Get the current scanline
 	scanline = ram[0x8009];
-	cfb_scanline = cfb + (scanline * SCREEN_WIDTH);	//Calculate fast offset
+	cfb_scanline = cfb + (scanline * 256); //SCREEN_WIDTH);	//Calculate fast offset
 
-	memset(cfb_scanline, 0, SCREEN_WIDTH * sizeof(_u16));
-	memset(zbuffer, 0, SCREEN_WIDTH);
+	//memset(cfb_scanline, 0, SCREEN_WIDTH * sizeof(_u16));
+	//memset(zbuffer, 0, SCREEN_WIDTH);
+	for( x = 0; x < 40; x+=4 )
+	{
+		((_u32 *)zbuffer)[x] = 0;
+		((_u32 *)zbuffer)[x+1] = 0;
+		((_u32 *)zbuffer)[x+2] = 0;
+		((_u32 *)zbuffer)[x+3] = 0;
+	}
 
 	//Window colour
-	r = (_u16)oowc << 1;
-	g = (_u16)oowc << 5;
-	b = (_u16)oowc << 9;
+	//r = (_u16)oowc << 1;
+	//g = (_u16)oowc << 5;
+	//b = (_u16)oowc << 9;
 	
 	if (negative)
-		data16 = (r | g | b);
+		data16 = uConvert3bTo16b[ oowc ]; //(r | g | b);
 	else
-		data16 = ~(r | g | b);
+		data16 = ~uConvert3bTo16b[ oowc ]; //(r | g | b);
 
 	//Top
 	if (scanline < winy)
 	{
+		// Fill Scanline
 		for (x = 0; x < SCREEN_WIDTH; x++)
 			cfb_scanline[x] = data16;
+		// Return. we're done
+		return;
 	}
 	else
 	{
@@ -204,27 +237,37 @@ void gfx_draw_scanline_mono(void)
 		if (scanline < winy + winh)
 		{
 			for (x = 0; x < min(winx, SCREEN_WIDTH); x++)
+			{
 				cfb_scanline[x] = data16;
+				zbuffer[x] = 255;
+			}
+
 			for (x = min(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
+			{
 				cfb_scanline[x] = data16;
+				zbuffer[x] = 255;
+			}
 		}
 		else	//Bottom
 		{
+			// Fill Scanline
 			for (x = 0; x < SCREEN_WIDTH; x++)
 				cfb_scanline[x] = data16;
+			// Return. we're done
+			return;
 		}
 	}
 
 	//Ignore above and below the window's top and bottom
-	if (scanline >= winy && scanline < winy + winh)
+	//if (scanline >= winy && scanline < winy + winh)
 	{
 		//Background colour Enabled?
 		if ((bgc & 0xC0) == 0x80)
 		{
-			r = (_u16)(bgc & 7) << 1;
-			g = (_u16)(bgc & 7) << 5;
-			b = (_u16)(bgc & 7) << 9;
-			data16 = ~(r | g | b);
+			//r = (_u16)(bgc & 7) << 1;
+			//g = (_u16)(bgc & 7) << 5;
+			//b = (_u16)(bgc & 7) << 9;
+			data16 = ~uConvert3bTo16b[ bgc & 7 ]; //(r | g | b);
 		}
 		else data16 = 0x0FFF;
 

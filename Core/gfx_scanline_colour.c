@@ -24,6 +24,14 @@
   History of changes:
   ===================
 
+06 JUL 2006 - PSmonkey
+=======================================
+- Optimised Rendering
+
+05 JUL 2006 - PSmonkey
+=======================================
+- Changed cfb offset to scanline * 256
+
 20 JUL 2002 - neopop_uk
 =======================================
 - Cleaned and tidied up for the source release
@@ -73,8 +81,8 @@ static void Plot(_u8 x, _u16* palette_ptr, _u8 palette, _u8 index, _u8 depth)
 {
 	_u16 data16;
 
-	//Clip
-	if (index == 0 || x < winx || x >= (winw + winx) || x >= SCREEN_WIDTH)
+	// Index & Depth check, <= to stop later sprites overwriting pixels!
+	if( ( index == 0 ) || ( depth <= zbuffer[x] ) )
 		return;
 
 	//Depth check, <= to stop later sprites overwriting pixels!
@@ -82,12 +90,12 @@ static void Plot(_u8 x, _u16* palette_ptr, _u8 palette, _u8 index, _u8 depth)
 	zbuffer[x] = depth;
 
 	//Get the colour of the pixel
-	data16 = palette_ptr[(palette << 2) + index];
+	cfb_scanline[x] = palette_ptr[(palette << 2) + index];
 
 	if (negative)
-		cfb_scanline[x] = ~data16;
-	else
-		cfb_scanline[x] = data16;
+		cfb_scanline[x] = ~cfb_scanline[x];
+//	else
+//		cfb_scanline[x] = data16;
 }
 
 static void drawPattern(_u8 screenx, _u16 tile, _u8 tiley, _u16 mirror, 
@@ -168,13 +176,21 @@ void gfx_draw_scanline_colour(void)
 	_s16 lastSpriteY;
 	int spr, x;
 	_u16 data16;
+	_u32* zbuffer32 = zbuffer;
 
 	//Get the current scanline
 	scanline = ram[0x8009];
-	cfb_scanline = cfb + (scanline * SCREEN_WIDTH);	//Calculate fast offset
+	cfb_scanline = cfb + (scanline * 256); //SCREEN_WIDTH);	//Calculate fast offset
 
-	memset(cfb_scanline, 0, SCREEN_WIDTH * sizeof(_u16));
-	memset(zbuffer, 0, SCREEN_WIDTH);
+	//memset(cfb_scanline, 0, SCREEN_WIDTH * sizeof(_u16));
+	//memset(zbuffer, 0, SCREEN_WIDTH);
+	for( x = 0; x < 40; x+=4 )
+	{
+		zbuffer32[x] = 0;
+		zbuffer32[x+1] = 0;
+		zbuffer32[x+2] = 0;
+		zbuffer32[x+3] = 0;
+	}
 
 	//Window colour
 	data16 = *(_u16*)(ram + 0x83F0 + (oowc << 1));
@@ -183,8 +199,11 @@ void gfx_draw_scanline_colour(void)
 	//Top
 	if (scanline < winy)
 	{
+		// Fill Scanline
 		for (x = 0; x < SCREEN_WIDTH; x++)
 			cfb_scanline[x] = data16;
+		// Return. we're done
+		return;
 	}
 	else
 	{
@@ -192,20 +211,29 @@ void gfx_draw_scanline_colour(void)
 		if (scanline < winy + winh)
 		{
 			for (x = 0; x < min(winx, SCREEN_WIDTH); x++)
+			{
 				cfb_scanline[x] = data16;
+				zbuffer[x] = 255;
+			}
 			
 			for (x = min(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
+			{
 				cfb_scanline[x] = data16;
+				zbuffer[x] = 255;
+			}
 		}
 		else	//Bottom
 		{
+			// Fill Scanline
 			for (x = 0; x < SCREEN_WIDTH; x++)
 				cfb_scanline[x] = data16;
+			// Return. we're done
+			return;
 		}
 	}
 
 	//Ignore above and below the window's top and bottom
-	if (scanline >= winy && scanline < winy + winh)
+	//if (scanline >= winy && scanline < winy + winh)
 	{
 		//Background colour Enabled?	HACK: 01 AUG 2002 - Always on!
 	//	if ((bgc & 0xC0) == 0x80)

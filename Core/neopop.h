@@ -310,7 +310,9 @@ RomHeader;
 #define SCREEN_HEIGHT	152
 
 	//16-bit Frame buffer: Format X4B4G4R4
-	extern _u16 cfb[256*256];
+	extern _u16* cfb; //[256*256];
+
+	extern _u8 interlace;
 
 	extern COLOURMODE system_colour;
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pspgu.h>
 #include <psptypes.h>
 #include <psprtc.h>
 
@@ -34,7 +35,7 @@ int InitEmulation()
 	mute = FALSE;
 	system_colour = COLOURMODE_AUTO;
 	language_english = TRUE;
-	system_frameskip_key = 8;		/* 1 - 7 */
+	system_frameskip_key = 2;		/* 1 - 7 */
 
   /* Load ROM */
   if (!system_load_rom("flack.ngp")) return 0;
@@ -50,43 +51,15 @@ int InitEmulation()
 
   Screen->Viewport.Width = SCREEN_WIDTH;
   Screen->Viewport.Height = SCREEN_HEIGHT;
+  Screen->TextureFormat = GU_PSM_4444;
+  cfb = Screen->Pixels;
 
   return 1;
-}
-
-void CopyBuffer()
-{
-	int x, y;
-	_u16 *row;
-	int r,g,b;
-
-	_u16 *frame16;
-	_u32 w = Screen->Width;
-
-	row = cfb;
-	frame16 = Screen->Pixels;
-
-	for (y = 0; y < SCREEN_HEIGHT; y++)
-	{
-		for (x = 0; x < SCREEN_WIDTH; x++)
-		{
-			r = ((row[x] & 0x00F) << 4) | (row[x] & 0x00F);
-			g = ((row[x] & 0x0F0)) | ((row[x] & 0x0F0) >> 4);
-			b = ((row[x] & 0xF00) >> 4) | ((row[x] & 0xF00) >> 8);
-
-      frame16[x] = RGB(r, g, b);
-		}
-
-		frame16 += w;
-		row += SCREEN_WIDTH;
-	}
 }
 
 void system_graphics_update()
 {
   pspVideoBegin();
-
-  CopyBuffer();  
 
   /* Perf counter */
   static char fps_display[64];
@@ -101,7 +74,7 @@ void system_graphics_update()
 
   /* Blit screen */
   pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
-
+//  pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW * 1.25, ScreenH * 1.25);
   pspVideoEnd();
 
   pspVideoSwapBuffers();
@@ -298,12 +271,14 @@ void RunEmulation()
   ScreenH = Screen->Viewport.Height;
 
   pspSetClockFrequency(333);
+  sceGuDisable(GU_BLEND);
 
   while (!ExitPSP)
   {
     emulate();
   }
 
+  sceGuEnable(GU_BLEND);
   pspSetClockFrequency(222);
 
   system_message("Exiting emulation\n");

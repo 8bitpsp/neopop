@@ -59,6 +59,7 @@ extern _u8 zbuffer[256];	//Line z-buffer
 extern _u16* cfb_scanline;	//set = cfb + (scanline * SCREEN_WIDTH)
 
 extern _u8 scanline;		//Current scanline
+extern _u8 interlace;		//which scanlines are drawn (even or odd)
 
 extern _u8 winx, winw;
 extern _u8 winy, winh;
