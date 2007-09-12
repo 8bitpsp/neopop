@@ -24,6 +24,11 @@
   History of changes:
   ===================
 
+11 SEP 2007 - Akop Karapetyan
+=======================================
+- ORing every pixel with 0xF000 (normally unused, for PSP specifies
+  an opaque pixel)
+
 06 JUL 2006 - PSmonkey
 =======================================
 - Optimised Rendering
@@ -90,12 +95,9 @@ static void Plot(_u8 x, _u16* palette_ptr, _u8 palette, _u8 index, _u8 depth)
 	zbuffer[x] = depth;
 
 	//Get the colour of the pixel
-	cfb_scanline[x] = palette_ptr[(palette << 2) + index];
-
-	if (negative)
-		cfb_scanline[x] = ~cfb_scanline[x];
-//	else
-//		cfb_scanline[x] = data16;
+  cfb_scanline[x] = ((negative) 
+    ? ~palette_ptr[(palette << 2) + index]
+    : palette_ptr[(palette << 2) + index]) | 0xF000;
 }
 
 static void drawPattern(_u8 screenx, _u16 tile, _u8 tiley, _u16 mirror, 
@@ -193,8 +195,9 @@ void gfx_draw_scanline_colour(void)
 	}
 
 	//Window colour
-	data16 = *(_u16*)(ram + 0x83F0 + (oowc << 1));
-	if (negative) data16 = ~data16;
+	data16 = ((negative) 
+	  ? ~(*(_u16*)(ram + 0x83F0 + (oowc << 1))) 
+    : *(_u16*)(ram + 0x83F0 + (oowc << 1))) | 0xF000;
 
 	//Top
 	if (scanline < winy)
@@ -246,7 +249,7 @@ void gfx_draw_scanline_colour(void)
 		
 		//Draw background!
 		for (x = winx; x < min(winx + winw, SCREEN_WIDTH); x++)	
-			cfb_scanline[x] = data16;
+			cfb_scanline[x] = data16 | 0xF000;
 
 		//Swap Front/Back scroll planes?
 		if (planeSwap)

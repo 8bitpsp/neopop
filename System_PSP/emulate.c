@@ -29,13 +29,12 @@ int InitEmulation()
 {
   system_message("Initializing... ");
 
-	/* Fill the bios buffer however it needs to be... */
+	/* Initialize BIOS */
 	if (!bios_install()) return 0;
 
-	mute = FALSE;
-	system_colour = COLOURMODE_AUTO;
+  /* Basic emulator initialization */
 	language_english = TRUE;
-	system_frameskip_key = 2;		/* 1 - 7 */
+	system_colour = COLOURMODE_AUTO;
 
   /* Load ROM */
   if (!system_load_rom("flack.ngp")) return 0;
@@ -51,7 +50,7 @@ int InitEmulation()
 
   Screen->Viewport.Width = SCREEN_WIDTH;
   Screen->Viewport.Height = SCREEN_HEIGHT;
-  Screen->TextureFormat = GU_PSM_4444;
+  Screen->TextureFormat = GU_PSM_4444; /* Override default 5551 */
   cfb = Screen->Pixels;
 
   return 1;
@@ -74,7 +73,6 @@ void system_graphics_update()
 
   /* Blit screen */
   pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
-//  pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW * 1.25, ScreenH * 1.25);
   pspVideoEnd();
 
   pspVideoSwapBuffers();
@@ -255,6 +253,8 @@ void system_VBL(void)
 
 	/* Update Sound */
 	system_sound_update();
+
+  /* TODO: Throttle framerate */
 }
 
 /* Run emulation */
@@ -270,8 +270,11 @@ void RunEmulation()
   ScreenW = Screen->Viewport.Width;
   ScreenH = Screen->Viewport.Height;
 
+ 	mute = TRUE;
+	system_frameskip_key = 1;		/* 1 - 7 */
+
   pspSetClockFrequency(333);
-  sceGuDisable(GU_BLEND);
+  sceGuDisable(GU_BLEND); /* Disable alpha blending */
 
   while (!ExitPSP)
   {
@@ -279,7 +282,7 @@ void RunEmulation()
   }
 
   sceGuEnable(GU_BLEND);
-  pspSetClockFrequency(222);
+  pspSetClockFrequency(222); /* Re-enable alpha blending */
 
   system_message("Exiting emulation\n");
 }

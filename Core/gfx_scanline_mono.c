@@ -24,6 +24,11 @@
   History of changes:
   ===================
 
+11 SEP 2007 - Akop Karapetyan
+=======================================
+- ORing every pixel with 0xF000 (normally unused, for PSP specifies
+  an opaque pixel)
+
 06 JUL 2006 - PSmonkey
 =======================================
 - Optimised Rendering
@@ -101,17 +106,15 @@ static void Plot(_u8 x, _u8* palette_ptr, _u16 pal_hi, _u8 index, _u8 depth)
 	//else
 	//	data8 = palette_ptr[0 + index];
 
-	if (pal_hi)
-		cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[4 + index] & 7 ];
-	else
-		cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[0 + index] & 7 ];
+	if (pal_hi) cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[4 + index] & 7 ];
+	else cfb_scanline[x] = uConvert3bTo16b[ palette_ptr[0 + index] & 7 ];
 
 //	r = (data8 & 7) << 1;
 //	g = (data8 & 7) << 5;
 //	b = (data8 & 7) << 9;
 
-	if (!negative)
-		cfb_scanline[x] = ~cfb_scanline[x];
+	if (!negative) cfb_scanline[x] = ~cfb_scanline[x] | 0xF000;
+	else cfb_scanline[x] = cfb_scanline[x] | 0xF000;
 
 	//if (negative)
 	//	cfb_scanline[x] = (r | g | b);
@@ -217,10 +220,9 @@ void gfx_draw_scanline_mono(void)
 	//g = (_u16)oowc << 5;
 	//b = (_u16)oowc << 9;
 	
-	if (negative)
-		data16 = uConvert3bTo16b[ oowc ]; //(r | g | b);
-	else
-		data16 = ~uConvert3bTo16b[ oowc ]; //(r | g | b);
+	data16 = ((negative) 
+	  ? uConvert3bTo16b[oowc]
+	  : ~uConvert3bTo16b[oowc]) | 0xF000;
 
 	//Top
 	if (scanline < winy)
@@ -275,7 +277,7 @@ void gfx_draw_scanline_mono(void)
 		
 		//Draw background!
 		for (x = winx; x < min(winx + winw, SCREEN_WIDTH); x++)	
-			cfb_scanline[x] = data16;
+			cfb_scanline[x] = data16 | 0xF000;
 
 		//Swap Front/Back scroll planes?
 		if (planeSwap)
