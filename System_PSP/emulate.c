@@ -11,6 +11,7 @@
 
 #include "emulate.h"
 
+#include "audio.h"
 #include "image.h"
 #include "psp.h"
 #include "video.h"
@@ -21,6 +22,9 @@ PspImage *Screen;
 
 static PspFpsCounter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
+static unsigned char SoundReady;
+
+void AudioCallback(void* buf, unsigned int *length, void *userdata);
 
 _u8 system_frameskip_key;
 
@@ -98,143 +102,6 @@ void system_input_update()
 		(button_a << 4) | (button_b << 5) | (option << 6);
 }
 
-void system_sound_update()
-{
-/*
-	int		pdwAudioBytes1, pdwAudioBytes2, count;
-	int		Write, LengthBytes;
-	_u16	*chipPtr1, *chipPtr2, *src16, *dest16;
-	_u8		*dacPtr1, *dacPtr2, *src8, *dest8;
-
-	IDirectSoundBuffer_GetCurrentPosition(chipBuffer, NULL, &Write);
-
-	// UNDEFINED write cursors
-	if (chipWrite == UNDEFINED || dacWrite == UNDEFINED)
-	{
-		lastChipWrite = chipWrite = Write;
-
-		// Get DAC position too.
-		IDirectSoundBuffer_GetCurrentPosition(dacBuffer, NULL, &Write);
-		lastDacWrite = dacWrite = Write;
-
-		return; //Wait a frame to accumulate length.
-	}
-
-	//Chip -> Direct Sound
-	//====================
-
-	if (Write < lastChipWrite)	//Wrap?
-		lastChipWrite -= CHIPBUFFERLENGTH;
-
-	LengthBytes = Write - lastChipWrite;
-	lastChipWrite = Write;
-*/
-//	sound_update((_u16*)block, LengthBytes>>1);	//Get sound data
-/*
-	if SUCCEEDED(IDirectSoundBuffer_Lock(chipBuffer, 
-		chipWrite, LengthBytes, &chipPtr1, &pdwAudioBytes1, 
-		&chipPtr2, &pdwAudioBytes2, 0))
-	{
-		src16 = (_u16*)block;	//Copy from this buffer
-
-		dest16 = chipPtr1;
-		count = pdwAudioBytes1 >> 2;
-		while(count)
-		{ 
-			*dest16++ = *src16;
-			*dest16++ = *src16++; count--; 
-		}
-
-		//Buffer Wrap?
-		if (chipPtr2)
-		{
-			dest16 = chipPtr2;
-			count = pdwAudioBytes2 >> 2;
-			while(count)
-			{ 
-				*dest16++ = *src16;
-				*dest16++ = *src16++; count--; 
-			}
-		}
-		
-		IDirectSoundBuffer_Unlock(chipBuffer, 
-			chipPtr1, pdwAudioBytes1, chipPtr2, pdwAudioBytes2);
-
-		chipWrite += LengthBytes;
-		if (chipWrite > CHIPBUFFERLENGTH)
-			chipWrite -= CHIPBUFFERLENGTH;
-	}
-	else
-	{
-		DWORD status;
-		chipWrite = UNDEFINED;
-		IDirectSoundBuffer_GetStatus(chipBuffer, &status);
-		if (status & DSBSTATUS_BUFFERLOST)
-		{
-			if (IDirectSoundBuffer_Restore(chipBuffer) != DS_OK) return;
-			if (!mute) IDirectSoundBuffer_Play(chipBuffer, 0, 0, DSBPLAY_LOOPING);
-		}
-	}
-
-	//DAC -> Direct Sound
-	//===================
-	IDirectSoundBuffer_GetCurrentPosition(dacBuffer, NULL, &Write);
-
-	if (Write < lastDacWrite)	//Wrap?
-		lastDacWrite -= DACBUFFERLENGTH;
-
-	LengthBytes = (Write - lastDacWrite); 
-	lastDacWrite = Write;
-*/
-//	dac_update(block, LengthBytes);	//Get DAC data
-/*
-	if SUCCEEDED(IDirectSoundBuffer_Lock(dacBuffer, 
-		dacWrite, LengthBytes, &dacPtr1, &pdwAudioBytes1, 
-		&dacPtr2, &pdwAudioBytes2, 0))
-	{
-		src8 = block;	//Copy from this buffer
-
-		dest8 = dacPtr1;
-		count = pdwAudioBytes1;
-		while(count)
-		{ 
-		   *dest8++ = *src8++; 
-		   count--;
-		}
-
-		//Buffer Wrap?
-		if (dacPtr2)
-		{
-		   dest8 = dacPtr2;
-		   count = pdwAudioBytes2;
-		   while(count)
-		   { 
-			   *dest8++ = *src8++; 
-			   count--;
-		   }
-		}
-		
-		IDirectSoundBuffer_Unlock(dacBuffer, 
-			dacPtr1, pdwAudioBytes1, dacPtr2, pdwAudioBytes2);
-
-		dacWrite += LengthBytes;
-		if (dacWrite >= DACBUFFERLENGTH)
-			dacWrite -= DACBUFFERLENGTH;
-	}
-	else
-	{
-		DWORD status;
-		dacWrite = UNDEFINED;
-		IDirectSoundBuffer_GetStatus(dacBuffer, &status);
-		if (status & DSBSTATUS_BUFFERLOST)
-		{
-			if (IDirectSoundBuffer_Restore(dacBuffer) != DS_OK) return;
-			if (!mute) IDirectSoundBuffer_Play(dacBuffer, 0, 0, DSBPLAY_LOOPING);
-		}
-	}
-*/
-}
-
 /*! Called at the start of the vertical blanking period, this function is
 	designed to perform many of the critical hardware interface updates
 	Here is a list of recommended actions to take:
@@ -251,8 +118,8 @@ void system_VBL(void)
 	/* Update Input */
 	system_input_update();
 
-	/* Update Sound */
-	system_sound_update();
+	/* Actual sound update is done in the callback */
+	SoundReady = 1;
 
   /* TODO: Throttle framerate */
 }
@@ -270,21 +137,36 @@ void RunEmulation()
   ScreenW = Screen->Viewport.Width;
   ScreenH = Screen->Viewport.Height;
 
- 	mute = TRUE;
-	system_frameskip_key = 1;		/* 1 - 7 */
+ 	mute = FALSE;
+	system_frameskip_key = 4;		/* 1 - 7 */
+	SoundReady = 0;
+
+  sceGuDisable(GU_BLEND); /* Disable alpha blending */
 
   pspSetClockFrequency(333);
-  sceGuDisable(GU_BLEND); /* Disable alpha blending */
+
+  if (!mute) pspAudioSetChannelCallback(0, AudioCallback, 0);
 
   while (!ExitPSP)
   {
     emulate();
   }
 
-  sceGuEnable(GU_BLEND);
-  pspSetClockFrequency(222); /* Re-enable alpha blending */
+  if (!mute) pspAudioSetChannelCallback(0, NULL, 0);
+
+  pspSetClockFrequency(222);
+
+  sceGuEnable(GU_BLEND); /* Re-enable alpha blending */
 
   system_message("Exiting emulation\n");
+}
+
+void AudioCallback(void* buf, unsigned int *length, void *userdata)
+{
+  int length_bytes = *length << 2;
+  if (!SoundReady) memset(buf, 0, length_bytes);
+	else sound_update_stereo((_u16*)buf, length_bytes);
+	SoundReady = 0;
 }
 
 /* Release emulation resources */

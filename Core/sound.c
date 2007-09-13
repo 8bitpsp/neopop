@@ -24,6 +24,10 @@
   History of changes:
   ===================
 
+12 SEP 2007 - Akop Karapetyan
+=======================================
+- Added sound_update_stereo
+
 20 JUL 2002 - neopop_uk
 =======================================
 - Cleaned and tidied up for the source release
@@ -265,6 +269,20 @@ static _u16 sample_chip_noise(void)
 }
 
 //=============================================================================
+
+void sound_update_stereo(_u16* chip_buffer, int length_bytes)
+{
+	while (length_bytes > 0)
+	{
+		//Mix a stereo track out of: (Tone + Noise) >> 1
+		//Write it to the sound buffer
+		_u16 sample = (sample_chip_tone() + sample_chip_noise()) >> 1;
+		*(chip_buffer++) = sample;
+		*(chip_buffer++) = sample;
+
+		length_bytes -= 4;	// 4 bytes = 2 * 16 bits
+	}
+}
 
 void sound_update(_u16* chip_buffer, int length_bytes)
 {

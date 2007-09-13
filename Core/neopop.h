@@ -27,6 +27,10 @@
   History of changes:
   ===================
 
+12 SEP 2007 - Akop Karapetyan
+=======================================
+- Added definition for sound_update_stereo
+
 20 JUL 2002 - neopop_uk
 =======================================
 - Cleaned and tidied up for the source release
@@ -339,6 +343,7 @@ RomHeader;
 /*!	Fills the given buffer with sound data */
 
 	void sound_update(_u16* chip_buffer, int length_bytes);
+	void sound_update_stereo(_u16* chip_buffer, int length_bytes);
 	void dac_update(_u8* dac_buffer, int length_bytes);
 
 /*! Initialises the sound chips using the given SampleRate */
