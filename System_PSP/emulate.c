@@ -7,9 +7,9 @@
 #include <psprtc.h>
 
 #include "neopop.h"
-#include "system_rom.h"
 
 #include "emulate.h"
+#include "emumenu.h"
 
 #include "audio.h"
 #include "image.h"
@@ -17,36 +17,39 @@
 #include "video.h"
 #include "perf.h"
 #include "ctrl.h"
+#include "util.h"
 
 PspImage *Screen;
 
 static PspFpsCounter FpsCounter;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
-static unsigned char SoundReady;
+static int ClearScreen;
+static int TicksPerUpdate;
+static u32 TicksPerSecond;
+static u64 LastTick;
+static u64 CurrentTick;
+static unsigned char SoundReady, ReturnToMenu;
 
-void AudioCallback(void* buf, unsigned int *length, void *userdata);
+extern char *GameName;
+extern EmulatorOptions Options;
+extern const u64 ButtonMask[];
+extern const int ButtonMapId[];
+extern struct ButtonConfig ActiveConfig;
+extern char *ScreenshotPath;
+
+static void AudioCallback(void* buf, unsigned int *length, void *userdata);
 
 _u8 system_frameskip_key;
 
 /* Initialize emulation */
 int InitEmulation()
 {
-  system_message("Initializing... ");
-
 	/* Initialize BIOS */
 	if (!bios_install()) return 0;
 
   /* Basic emulator initialization */
 	language_english = TRUE;
 	system_colour = COLOURMODE_AUTO;
-
-  /* Load ROM */
-  if (!system_load_rom("flack.ngp")) return 0;
-
-  /* Reset */
-	reset();
-
-  system_message("OK\n");
 
   /* Create screen buffer */
   if (!(Screen = pspImageCreateVram(256, 256, PSP_IMAGE_16BPP)))
@@ -64,19 +67,29 @@ void system_graphics_update()
 {
   pspVideoBegin();
 
-  /* Perf counter */
-  static char fps_display[64];
-  sprintf(fps_display, " %3.02f ", pspPerfGetFps(&FpsCounter));
-
-  int width = pspFontGetTextWidth(&PspStockFont, fps_display);
-  int height = pspFontGetLineHeight(&PspStockFont);
-
-  pspVideoFillRect(SCR_WIDTH - width, 0, SCR_WIDTH, height, PSP_COLOR_BLACK);
-  pspVideoPrint(&PspStockFont, SCR_WIDTH - width, 0, fps_display, PSP_COLOR_WHITE);
-  /* End */
+  /* Clear the buffer first, if necessary */
+  if (ClearScreen >= 0)
+  {
+    ClearScreen--;
+    pspVideoClearScreen();
+  }
 
   /* Blit screen */
   pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
+
+  /* Show FPS counter */
+  if (Options.ShowFps)
+  {
+	  static char fps_display[64];
+	  sprintf(fps_display, " %3.02f ", pspPerfGetFps(&FpsCounter));
+
+	  int width = pspFontGetTextWidth(&PspStockFont, fps_display);
+	  int height = pspFontGetLineHeight(&PspStockFont);
+
+	  pspVideoFillRect(SCR_WIDTH - width, 0, SCR_WIDTH, height, PSP_COLOR_BLACK);
+	  pspVideoPrint(&PspStockFont, SCR_WIDTH - width, 0, fps_display, PSP_COLOR_WHITE);
+	}
+
   pspVideoEnd();
 
   pspVideoSwapBuffers();
@@ -84,32 +97,50 @@ void system_graphics_update()
 
 void system_input_update()
 {
+  _u8 *input_ptr = &ram[0x6F82];
+
+  /* Reset input */
+  *input_ptr = 0;
+
   static SceCtrlData pad;
-  int up, down, left, right, button_a, button_b, option;
 
-  pspCtrlPollControls(&pad);
+  /* Check the input */
+  if (pspCtrlPollControls(&pad))
+  {
+#ifdef PSP_DEBUG
+    if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
+      == (PSP_CTRL_SELECT | PSP_CTRL_START))
+        pspUtilSaveVramSeq(ScreenshotPath, "game");
+#endif
 
-  up = (pad.Buttons & PSP_CTRL_UP) ? 1 : 0;
-  down = (pad.Buttons & PSP_CTRL_DOWN) ? 1 : 0;
-  left = (pad.Buttons & PSP_CTRL_LEFT) ? 1 : 0;
-  right = (pad.Buttons & PSP_CTRL_RIGHT) ? 1 : 0;
-  button_a = (pad.Buttons & PSP_CTRL_CROSS) ? 1 : 0;
-  button_b = (pad.Buttons & PSP_CTRL_SQUARE) ? 1 : 0;
-  option = (pad.Buttons & PSP_CTRL_SELECT) ? 1 : 0;
+    /* Parse input */
+    int i, on, code;
+    for (i = 0; ButtonMapId[i] >= 0; i++)
+    {
+      code = ActiveConfig.ButtonMap[ButtonMapId[i]];
+      on = (pad.Buttons & ButtonMask[i]) == ButtonMask[i];
 
-	/* Write the controller status to memory */
-	ram[0x6F82] = up | (down << 1) | (left << 2) | (right << 3) | 
-		(button_a << 4) | (button_b << 5) | (option << 6);
+      /* Check to see if a button set is pressed. If so, unset it, so it */
+      /* doesn't trigger any other combination presses. */
+      if (on) pad.Buttons &= ~ButtonMask[i];
+
+      if (code & JOY)
+      {
+        if (on) *input_ptr |= CODE_MASK(code);
+      }
+      else if (code & SPC)
+      {
+        switch (CODE_MASK(code))
+        {
+        case SPC_MENU:
+          ReturnToMenu = on; break;
+        }
+      }
+    }
+  }
 }
 
-/*! Called at the start of the vertical blanking period, this function is
-	designed to perform many of the critical hardware interface updates
-	Here is a list of recommended actions to take:
-	
-	- The frame buffer should be copied to the screen.
-	- The frame rate should be throttled to 59.95hz
-	- The sound chips should be polled for the next chunk of data
-	- Input should be polled and the current status written to "ram[0x6F82]" */
+/*! Called at the start of the vertical blanking period */
 void system_VBL(void)
 {
 	/* Update Graphics */
@@ -121,49 +152,84 @@ void system_VBL(void)
 	/* Actual sound update is done in the callback */
 	SoundReady = 1;
 
-  /* TODO: Throttle framerate */
+  /* Wait if needed */
+  if (Options.UpdateFreq)
+  {
+    do { sceRtcGetCurrentTick(&CurrentTick); }
+    while (CurrentTick - LastTick < TicksPerUpdate);
+    LastTick = CurrentTick;
+  }
+
+  /* Wait for VSync signal */
+  if (Options.VSync) pspVideoWaitVSync();
 }
 
 /* Run emulation */
 void RunEmulation()
 {
-  system_message("Entering emulation loop\n");
+  float ratio;
+
+  /* Recompute screen size/position */
+  switch (Options.DisplayMode)
+  {
+  default:
+  case DISPLAY_MODE_UNSCALED:
+    ScreenW = Screen->Viewport.Width;
+    ScreenH = Screen->Viewport.Height;
+    break;
+  case DISPLAY_MODE_FIT_HEIGHT:
+    ratio = (float)SCR_HEIGHT / (float)Screen->Viewport.Height;
+    ScreenW = (float)Screen->Viewport.Width * ratio - 2;
+    ScreenH = SCR_HEIGHT;
+    break;
+  case DISPLAY_MODE_FILL_SCREEN:
+    ScreenW = SCR_WIDTH - 3;
+    ScreenH = SCR_HEIGHT;
+    break;
+  }
+
+  ScreenX = (SCR_WIDTH / 2) - (ScreenW / 2);
+  ScreenY = (SCR_HEIGHT / 2) - (ScreenH / 2);
 
   /* Initialize performance counter */
   pspPerfInitFps(&FpsCounter);
+  pspImageClear(Screen, 0);
 
-  ScreenX = 0;
-  ScreenY = 0;
-  ScreenW = Screen->Viewport.Width;
-  ScreenH = Screen->Viewport.Height;
+  /* Recompute update frequency */
+  TicksPerSecond = sceRtcGetTickResolution();
+  if (Options.UpdateFreq)
+  {
+    TicksPerUpdate = TicksPerSecond
+      / (Options.UpdateFreq / (Options.Frameskip + 1));
+    sceRtcGetCurrentTick(&LastTick);
+  }
 
- 	mute = FALSE;
-	system_frameskip_key = 4;		/* 1 - 7 */
+ 	mute = Options.SoundOn;
+	system_frameskip_key = Options.Frameskip + 1; /* 1 - 7 */
 	SoundReady = 0;
+  ReturnToMenu = 0;
+  ClearScreen = 1;
 
   sceGuDisable(GU_BLEND); /* Disable alpha blending */
 
-  pspSetClockFrequency(333);
-
   if (!mute) pspAudioSetChannelCallback(0, AudioCallback, 0);
 
-  while (!ExitPSP)
-  {
+  /* Wait for V. refresh */
+  pspVideoWaitVSync();
+
+  while (!ExitPSP && !ReturnToMenu)
     emulate();
-  }
 
   if (!mute) pspAudioSetChannelCallback(0, NULL, 0);
 
-  pspSetClockFrequency(222);
-
   sceGuEnable(GU_BLEND); /* Re-enable alpha blending */
-
-  system_message("Exiting emulation\n");
 }
 
 void AudioCallback(void* buf, unsigned int *length, void *userdata)
 {
-  int length_bytes = *length << 2;
+  int length_bytes = *length << 2; /* 4 bytes per stereo sample */
+
+  /* If the sound buffer's not ready, render silence */
   if (!SoundReady) memset(buf, 0, length_bytes);
 	else sound_update_stereo((_u16*)buf, length_bytes);
 	SoundReady = 0;
@@ -172,9 +238,6 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
 /* Release emulation resources */
 void TrashEmulation()
 {
-  system_message("Releasing resources... ");
-
   pspImageDestroy(Screen);
-
-  system_message("done\n");
 }
+

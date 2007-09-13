@@ -41,7 +41,7 @@ BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o \
              $(PSPLIB)/init.o
-BUILD_PSPAPP=$(PSPAPP)/emulate.o $(PSPAPP)/menu.o $(PSPAPP)/neopop.o \
+BUILD_PSPAPP=$(PSPAPP)/emulate.o $(PSPAPP)/emumenu.o $(PSPAPP)/neopop.o \
              $(PSPAPP)/system_rom.o $(PSPAPP)/main.o
 
 OBJS=$(BUILD_APP) $(BUILD_PSPLIB) $(BUILD_PSPAPP)
