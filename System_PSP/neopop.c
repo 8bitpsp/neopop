@@ -3,7 +3,15 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "fileio.h"
+#include "image.h"
+#include "video.h"
+
 #include "neopop.h"
+
+extern PspImage *Screen;
+extern char *SaveStatePath;
+extern char *GameName;
 
 typedef struct
 {
@@ -101,17 +109,19 @@ BOOL system_comms_poll(_u8* buffer)
 
 BOOL system_io_state_read(char* filename, _u8* buffer, _u32 bufferLength)
 {
-  FILE* file;
-  file = fopen(filename, "rb");
+  /* Open file for reading */
+  FILE *f = fopen(filename, "r");
+  if (!f) return 0;
 
-  if (file)
-  {
-    fread(buffer, bufferLength, sizeof(_u8), file);
-    fclose(file);
-    return TRUE;
-  }
+  /* Load image into temporary object */
+  PspImage *image = pspImageLoadPngFd(f);
+  pspImageDestroy(image);
 
-  return FALSE;
+  /* Load state data */
+  fread(buffer, bufferLength, sizeof(_u8), f);
+  fclose(f);
+
+  return 1;
 }
 
 /*! Writes to the file specified by 'filename' from the given buffer.
@@ -119,17 +129,49 @@ BOOL system_io_state_read(char* filename, _u8* buffer, _u32 bufferLength)
 
 BOOL system_io_state_write(char* filename, _u8* buffer, _u32 bufferLength)
 {
-  FILE* file;
-  file = fopen(filename, "wb");
+  /* Open file for writing */
+  FILE *f;
+  if (!(f = fopen(filename, "w"))) return 0;
 
-  if (file)
+  /* Create copy of screen */
+  PspImage *copy;
+  if (!(copy = pspImageCreateCopy(Screen)))
   {
-    fwrite(buffer, bufferLength, sizeof(_u8), file);
-    fclose(file);
-    return TRUE;
+    fclose(f);
+    return 0;
   }
 
-  return FALSE;
+  /* Correct for color (4444 to 5551) */
+  int i, j, r, g, b;
+  for (i = copy->Viewport.Y + copy->Viewport.Height; i >= copy->Viewport.Y; i--)
+  {
+    for (j = copy->Viewport.X + copy->Viewport.Width; j >= copy->Viewport.X; j--)
+    {
+      _u16 *pixel = &((_u16*)copy->Pixels)[i * copy->Width + j];
+
+      r = ((*pixel & 0xf) * 0xff / 0xf);
+      g = (((*pixel >> 4) & 0xf) * 0xff / 0xf);
+      b = (((*pixel >> 8) & 0xf) * 0xff / 0xf);
+
+      *pixel = RGB(r,g,b);
+    }
+  }
+
+  /* Write the screenshot */
+  if (!pspImageSavePngFd(f, copy))
+  {
+    fclose(f);
+    pspImageDestroy(copy);
+    return 0;
+  }
+
+  pspImageDestroy(copy);
+
+  /* Write state data */
+  fwrite(buffer, bufferLength, sizeof(_u8), f);
+  fclose(f);
+
+  return 1;
 }
 
 /*! Reads the "appropriate" (system specific) flash data into the given
@@ -137,22 +179,20 @@ BOOL system_io_state_write(char* filename, _u8* buffer, _u32 bufferLength)
 
 BOOL system_io_flash_read(_u8* buffer, _u32 bufferLength)
 {
-  char path[256];
+  char *path;
+  const char *config_name = pspFileIoGetFilename(GameName);
+  path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
+  sprintf(path, "%s%s.ngf", SaveStatePath, config_name);
+
   FILE* file;
-
-  //Build a path to the flash file
-  sprintf(path, "%s\\%s.ngf", FlashDirectory, rom.filename);
-
-  file = fopen(path, "rb");
-
-  if (file)
+  if ((file = fopen(path, "r")))
   {
     fread(buffer, bufferLength, sizeof(_u8), file);
     fclose(file);
-    return TRUE;
   }
 
-  return FALSE;
+  free(path);
+  return file != NULL;
 }
 
 /*! Writes the given flash data into an "appropriate" (system specific)
@@ -160,24 +200,20 @@ BOOL system_io_flash_read(_u8* buffer, _u32 bufferLength)
 
 BOOL system_io_flash_write(_u8* buffer, _u32 bufferLength)
 {
-  char path[256];
+  char *path;
+  const char *config_name = pspFileIoGetFilename(GameName);
+  path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
+  sprintf(path, "%s%s.ngf", SaveStatePath, config_name);
+
   FILE* file;
-
-  //Build a path for the flash file
-  sprintf(path, "%s\\%s.ngf", FlashDirectory, rom.filename);
-  
-  file = fopen(path, "wb");
-
-  if (file)
+  if ((file = fopen(path, "w")))
   {
     fwrite(buffer, bufferLength, sizeof(_u8), file);
     fclose(file);
-    return TRUE;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  free(path);
+  return file != NULL;
 }
 
 /*! Reads as much of the file specified by 'filename' into the given, 
@@ -206,67 +242,10 @@ void system_sound_chipreset()
   sound_init(CHIP_FREQUENCY);
 }
 
-/* Dummy code starts here */
-
 /*! Clears the sound output. */
   
 void system_sound_silence()
 {
-/*
-  BYTE  *ppvAudioPtr1, *ppvAudioPtr2;
-  DWORD  pdwAudioBytes1, pdwAudioBytes2;
-
-  chipWrite = UNDEFINED;
-  dacWrite = UNDEFINED; 
-
-  if (chipBuffer)
-  {
-    IDirectSoundBuffer_Stop(chipBuffer);
-
-    // Fill the sound buffer
-    if SUCCEEDED(IDirectSoundBuffer_Lock(chipBuffer, 0, 0, 
-      &ppvAudioPtr1, &pdwAudioBytes1, 
-      &ppvAudioPtr2, &pdwAudioBytes2, DSBLOCK_ENTIREBUFFER))
-    {
-      if (ppvAudioPtr1 && pdwAudioBytes1)
-        memset(ppvAudioPtr1, 0, pdwAudioBytes1);
-
-      if (ppvAudioPtr2 && pdwAudioBytes2)
-        memset(ppvAudioPtr2, 0, pdwAudioBytes2);
-      
-      IDirectSoundBuffer_Unlock(chipBuffer, 
-        ppvAudioPtr1, pdwAudioBytes1, ppvAudioPtr2, pdwAudioBytes2);
-    }
-
-    //Start playing
-    if (mute == FALSE)
-      IDirectSoundBuffer_Play(chipBuffer, 0,0, DSBPLAY_LOOPING );
-  }
-
-  if (dacBuffer)
-  {
-    IDirectSoundBuffer_Stop(dacBuffer);
-
-    // Fill the sound buffer
-    if SUCCEEDED(IDirectSoundBuffer_Lock(dacBuffer, 0, 0, 
-      &ppvAudioPtr1, &pdwAudioBytes1, 
-      &ppvAudioPtr2, &pdwAudioBytes2, DSBLOCK_ENTIREBUFFER))
-    {
-      if (ppvAudioPtr1 && pdwAudioBytes1)
-        memset(ppvAudioPtr1, 0x80, pdwAudioBytes1);
-
-      if (ppvAudioPtr2 && pdwAudioBytes2)
-        memset(ppvAudioPtr2, 0x80, pdwAudioBytes2);
-      
-      IDirectSoundBuffer_Unlock(dacBuffer, 
-        ppvAudioPtr1, pdwAudioBytes1, ppvAudioPtr2, pdwAudioBytes2);
-    }
-
-    //Start playing
-    if (mute == FALSE)
-      IDirectSoundBuffer_Play(dacBuffer, 0,0, DSBPLAY_LOOPING );
-  }
-*/
 }
 
 

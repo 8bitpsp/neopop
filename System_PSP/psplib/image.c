@@ -21,6 +21,8 @@
 
 typedef unsigned char byte;
 
+int FindPowerOfTwoLargerThan(int n);
+
 /* Creates an image in memory */
 PspImage* pspImageCreate(int width, int height, int bpp)
 {
@@ -107,6 +109,14 @@ PspImage* pspImageCreateVram(int width, int height, int bpp)
   case PSP_IMAGE_INDEXED: image->TextureFormat = GU_PSM_T8;   break;
   case PSP_IMAGE_16BPP:   image->TextureFormat = GU_PSM_5551; break;
   }
+
+  return image;
+}
+
+PspImage* pspImageCreateOptimized(int width, int height, int bpp)
+{
+  PspImage *image = pspImageCreate(FindPowerOfTwoLargerThan(width), height, bpp);
+  if (image) image->Viewport.Width = width;
 
   return image;
 }
@@ -302,11 +312,14 @@ PspImage* pspImageLoadPngFd(FILE *fp)
 
   PspImage *image;
 
-  if (!(image = pspImageCreate(width, height, PSP_IMAGE_16BPP)))
+  int mod_width = FindPowerOfTwoLargerThan(width);
+  if (!(image = pspImageCreate(mod_width, height, PSP_IMAGE_16BPP)))
   {
     png_destroy_read_struct(&pPngStruct, &pPngInfo, NULL);
     return 0;
   }
+
+  image->Viewport.Width = width;
 
   png_byte **pRowTable = pPngInfo->row_pointers;
   unsigned int x, y;
@@ -316,6 +329,7 @@ PspImage* pspImageLoadPngFd(FILE *fp)
   for (y=0; y<height; y++)
   {
     png_byte *pRow = pRowTable[y];
+
     for (x=0; x<width; x++)
     {
       switch(color_type)
@@ -344,8 +358,10 @@ PspImage* pspImageLoadPngFd(FILE *fp)
           break;
       }
 
-      *out++=RGB(r,g,b);
+      *out++ = RGB(r,g,b);
     }
+
+    out += (mod_width - width);
   }
 
   png_destroy_read_struct(&pPngStruct, &pPngInfo, NULL);
@@ -457,3 +473,11 @@ int pspImageSavePngFd(FILE *fp, const PspImage* image)
 
   return 1;
 }
+
+int FindPowerOfTwoLargerThan(int n)
+{
+  int i;
+  for (i = n; i < n; i *= 2);
+  return i;
+}
+

@@ -48,7 +48,6 @@ typedef struct
   int VSync;
   int UpdateFreq;
   int Frameskip;
-  int SoundOn;
 } EmulatorOptions;
 
 struct ButtonConfig

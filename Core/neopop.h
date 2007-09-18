@@ -27,6 +27,10 @@
   History of changes:
   ===================
 
+14 SEP 2007 - Akop Karapetyan
+=======================================
+- state_store and state_restore now return true/false
+
 12 SEP 2007 - Akop Karapetyan
 =======================================
 - Added definition for sound_update_stereo
@@ -365,8 +369,8 @@ RomHeader;
 // Core <--> System-IO Interface
 //-----------------------------------------------------------------------------
 
-	void state_restore(char* filename);
-	void state_store(char* filename);
+	BOOL state_restore(char* filename);
+	BOOL state_store(char* filename);
 
 		//=========================================
 

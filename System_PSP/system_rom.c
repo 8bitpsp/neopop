@@ -53,25 +53,32 @@ should be more obvious.
 
 //=============================================================================
 
-//#define ZIPSUPPORT  //Comment this line to remove zip support
+#define ZIPSUPPORT  //Comment this line to remove zip support
 
 //=============================================================================
 
 #include "neopop.h"
 #include <sys/stat.h>
+#include <ctype.h>
 
 #include "system_rom.h"
 
 //=============================================================================
 
 #ifdef ZIPSUPPORT
-#include "zLIB\unzip.h"
+#include "zLIB/unzip.h"
 static BOOL LoadRomZip(char* filename);
 #endif
 
 static BOOL LoadRomFile(char* filename);
 
 //=============================================================================
+
+void _strlwr(char *string)
+{
+  char *c;
+  for (c = string; *c; c++) *c = (char)tolower(*c);
+}
 
 //-----------------------------------------------------------------------------
 // system_load_rom()

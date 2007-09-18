@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 {
   /* Initialize PSP */
   pspInit(argv[0]);
-  pspAudioInit(2048);
+  pspAudioInit(512);
   pspCtrlInit();
   pspVideoInit();
 

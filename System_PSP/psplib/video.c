@@ -520,15 +520,17 @@ PspImage* pspVideoGetVramBufferCopy()
     *vram_addr = (u16*)((u8*)VRAM_START + 0x40000000);
   PspImage *image;
 
-  if (!(image = pspImageCreate(SCR_WIDTH, SCR_HEIGHT, PSP_IMAGE_16BPP)))
+  if (!(image = pspImageCreate(BUF_WIDTH, SCR_HEIGHT, PSP_IMAGE_16BPP)))
     return NULL;
+
+  image->Viewport.Width = SCR_WIDTH;
 
   for (i = 0; i < image->Height; i++)
   {
-    for (j = 0; j < image->Width; j++)
+    for (j = 0; j < image->Viewport.Width; j++)
     {
       pixel = (unsigned short*)image->Pixels + (i * image->Width + j);
-      *pixel = *(vram_addr + (i * BUF_WIDTH + j));
+      *pixel = *(vram_addr + (i * BUF_WIDTH + j)) | 0x8000;
     }
   }
 

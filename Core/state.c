@@ -24,6 +24,10 @@
   History of changes:
   ===================
 
+14 SEP 2007 - Akop Karapetyan
+=======================================
+- state_store and state_restore now return true/false
+
 20 JUL 2002 - neopop_uk
 =======================================
 - Cleaned and tidied up for the source release
@@ -56,7 +60,7 @@ static void read_state_0050(char* filename);
 //-----------------------------------------------------------------------------
 // state_restore()
 //-----------------------------------------------------------------------------
-void state_restore(char* filename)
+BOOL state_restore(char* filename)
 {
 	_u16 version;
 
@@ -68,14 +72,18 @@ void state_restore(char* filename)
 
 		default:
 			system_message(system_get_string(IDS_BADSTATE));
-			return;
+			return FALSE;
 		}
 
 #ifdef NEOPOP_DEBUG
 		system_debug_message("Restoring State ...");
 		system_debug_refresh();
 #endif
+
+    return TRUE;
 	}
+
+  return FALSE;
 }
 
 //=============================================================================
@@ -83,7 +91,7 @@ void state_restore(char* filename)
 //-----------------------------------------------------------------------------
 // state_store()
 //-----------------------------------------------------------------------------
-void state_store(char* filename)
+BOOL state_store(char* filename)
 {
 	NEOPOPSTATE0050	state;
 	int i,j;
@@ -140,7 +148,7 @@ void state_store(char* filename)
 	system_debug_message("Saving State ...");
 #endif
 
-	system_io_state_write(filename, (_u8*)&state, sizeof(NEOPOPSTATE0050));
+	return system_io_state_write(filename, (_u8*)&state, sizeof(NEOPOPSTATE0050));
 }
 
 //=============================================================================

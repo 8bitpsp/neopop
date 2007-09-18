@@ -28,7 +28,7 @@ static int TicksPerUpdate;
 static u32 TicksPerSecond;
 static u64 LastTick;
 static u64 CurrentTick;
-static unsigned char SoundReady, ReturnToMenu;
+static unsigned char ReturnToMenu;
 
 extern char *GameName;
 extern EmulatorOptions Options;
@@ -92,6 +92,17 @@ void system_graphics_update()
 
   pspVideoEnd();
 
+  /* Wait if needed */
+  if (Options.UpdateFreq)
+  {
+    do { sceRtcGetCurrentTick(&CurrentTick); }
+    while (CurrentTick - LastTick < TicksPerUpdate);
+    LastTick = CurrentTick;
+  }
+
+  /* Wait for VSync signal */
+  if (Options.VSync) pspVideoWaitVSync();
+
   pspVideoSwapBuffers();
 }
 
@@ -144,24 +155,13 @@ void system_input_update()
 void system_VBL(void)
 {
 	/* Update Graphics */
-  system_graphics_update();
+  if (frameskip_count == 0)
+    system_graphics_update();
 
 	/* Update Input */
 	system_input_update();
 
-	/* Actual sound update is done in the callback */
-	SoundReady = 1;
-
-  /* Wait if needed */
-  if (Options.UpdateFreq)
-  {
-    do { sceRtcGetCurrentTick(&CurrentTick); }
-    while (CurrentTick - LastTick < TicksPerUpdate);
-    LastTick = CurrentTick;
-  }
-
-  /* Wait for VSync signal */
-  if (Options.VSync) pspVideoWaitVSync();
+	/* Sound update performed in the callback */
 }
 
 /* Run emulation */
@@ -199,27 +199,28 @@ void RunEmulation()
   TicksPerSecond = sceRtcGetTickResolution();
   if (Options.UpdateFreq)
   {
-    TicksPerUpdate = TicksPerSecond
+    TicksPerUpdate = TicksPerSecond 
       / (Options.UpdateFreq / (Options.Frameskip + 1));
     sceRtcGetCurrentTick(&LastTick);
   }
 
- 	mute = Options.SoundOn;
 	system_frameskip_key = Options.Frameskip + 1; /* 1 - 7 */
-	SoundReady = 0;
   ReturnToMenu = 0;
   ClearScreen = 1;
 
   sceGuDisable(GU_BLEND); /* Disable alpha blending */
 
+  /* Initiate sound */
   if (!mute) pspAudioSetChannelCallback(0, AudioCallback, 0);
 
   /* Wait for V. refresh */
   pspVideoWaitVSync();
 
+  /* Emulation loop */
   while (!ExitPSP && !ReturnToMenu)
     emulate();
 
+  /* Stop sound */
   if (!mute) pspAudioSetChannelCallback(0, NULL, 0);
 
   sceGuEnable(GU_BLEND); /* Re-enable alpha blending */
@@ -230,9 +231,8 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
   int length_bytes = *length << 2; /* 4 bytes per stereo sample */
 
   /* If the sound buffer's not ready, render silence */
-  if (!SoundReady) memset(buf, 0, length_bytes);
+  if (ExitPSP || ReturnToMenu) memset(buf, 0, length_bytes);
 	else sound_update_stereo((_u16*)buf, length_bytes);
-	SoundReady = 0;
 }
 
 /* Release emulation resources */
