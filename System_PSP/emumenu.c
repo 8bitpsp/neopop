@@ -448,7 +448,7 @@ void LoadOptions()
 
   /* Load values */
   Options.DisplayMode = pspInitGetInt(init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
-  Options.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 60);
+  Options.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 0);
   Options.Frameskip = pspInitGetInt(init, "Video", "Frameskip", 1);
   Options.VSync = pspInitGetInt(init, "Video", "VSync", 0);
   Options.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
