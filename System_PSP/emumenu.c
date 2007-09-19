@@ -300,8 +300,8 @@ struct ButtonConfig DefaultConfig =
     JOY|0x02, /* D-pad Down   */
     JOY|0x04, /* D-pad Left   */
     JOY|0x08, /* D-pad Right  */
-    JOY|0x20, /* Square       */
-    JOY|0x10, /* Cross        */
+    JOY|0x10, /* Square       */
+    JOY|0x20, /* Cross        */
     0,        /* Circle       */
     0,        /* Triangle     */
     0,        /* L Trigger    */
@@ -1014,6 +1014,9 @@ static void DisplayStateTab()
 
   const char *config_name = pspFileIoGetFilename(GameName);
   char *path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
+  char *game_name = strdup(config_name);
+  char *dot = strrchr(game_name, '.');
+  if (dot) *dot='\0';
 
   /* Initialize icons */
   for (item = SaveStateGallery.Menu->First; item; item = item->Next)
@@ -1045,7 +1048,8 @@ static void DisplayStateTab()
   }
 
   free(path);
-  pspUiOpenGallery(&SaveStateGallery, (char*)rom.name);
+  pspUiOpenGallery(&SaveStateGallery, game_name);
+  free(game_name);
 
   /* Destroy any icons */
   for (item = SaveStateGallery.Menu->First; item; item = item->Next)
