@@ -41,15 +41,27 @@ static const char
 
   *SelectorTemplate = "\026\001\020 Confirm\t\026\002\020 Cancel",
 
-  *BrowserCancelTemplate    = "\026\002\020 Cancel",
-  *BrowserEnterDirTemplate  = "\026\001\020 Enter directory",
-  *BrowserOpenTemplate      = "\026\001\020 Open",
-  *BrowserParentDirTemplate = "\026\243\020 Parent directory",
+  *BrowserTemplates[] = {
+    "\026\002\020 Cancel\t\026\001\020 Open",
+    "\026\002\020 Cancel\t\026\001\020 Enter directory",
+    "\026\002\020 Cancel\t\026\001\020 Open\t\026"PSP_CHAR_TRIANGLE"\020 Parent directory",
+    "\026\002\020 Cancel\t\026\001\020 Enter directory\t\026"PSP_CHAR_TRIANGLE"\020 Parent directory"
+   },
 
   *SplashStatusBarTemplate  = "\026\255\020/\026\256\020 Switch tabs",
 
   *OptionModeTemplate = 
     "\026\245\020/\026\246\020 Select\t\026\247\020/\026\002\020 Cancel\t\026\250\020/\026\001\020 Confirm";
+
+enum
+{
+  BrowserTemplateOpenTop  = 0,
+  BrowserTemplateEnterTop = 1,
+  BrowserTemplateOpen     = 2,
+  BrowserTemplateEnter    = 3,
+};
+
+#define BROWSER_TEMPLATE_COUNT 4
 
 struct UiPos
 {
@@ -58,8 +70,8 @@ struct UiPos
   const PspMenuItem *Top;
 };
 
-/* TODO: dynamically allocate */
-static unsigned int __attribute__((aligned(16))) call_list[262144];
+/* TODO: dynamically allocate ?? */
+static unsigned int __attribute__((aligned(16))) call_list[524288];//262144];
 
 /* Gets status string - containing current time and battery information */
 static void GetStatusString(char *status, int length)
@@ -565,7 +577,15 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   const PspMenuItem *sel, *last_sel;
   PspMenuItem *item;
   SceCtrlData pad;
-  char *instr;
+  char *instructions[BROWSER_TEMPLATE_COUNT];
+
+  /* Initialize instruction strings */
+  int i;
+  for (i = 0; i < BROWSER_TEMPLATE_COUNT; i++)
+  {
+    instructions[i] = strdup(BrowserTemplates[i]);
+    ReplaceIcons(instructions[i]);
+  }
 
   if (!start_path)
     start_path = pspGetAppDirectory();
@@ -573,8 +593,8 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   char *cur_path = pspFileIoGetParentDirectory(start_path);
   const char *cur_file = pspFileIoGetFilename(start_path);
   struct UiPos pos;
-  int lnmax, lnhalf, instr_len;
-  int sby, sbh, i, j, h, w, fh = pspFontGetLineHeight(UiMetric.Font);
+  int lnmax, lnhalf;
+  int sby, sbh, j, h, w, fh = pspFontGetLineHeight(UiMetric.Font);
   int sx, sy, dx, dy;
   int hasparent, is_dir;
 
@@ -586,17 +606,6 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   h = dy - sy;
 
   menu = pspMenuCreate();
-
-  /* Compute max. space needed for instructions */
-  instr_len = strlen(BrowserCancelTemplate) + 1;
-  instr_len += 1 
-    + ((strlen(BrowserEnterDirTemplate) > strlen(BrowserOpenTemplate)) 
-      ? strlen(BrowserEnterDirTemplate) : strlen(BrowserOpenTemplate));
-  instr_len += 1 + strlen(BrowserParentDirTemplate);
-  instr = (char*)malloc(sizeof(char) * instr_len);
-
-  u32 ticks_per_sec, ticks_per_upd;
-  u64 current_tick, last_tick;
 
   memset(call_list, 0, sizeof(call_list));
 
@@ -676,11 +685,6 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
     }
 
     pspVideoWaitVSync();
-
-    /* Compute update frequency */
-    ticks_per_sec = sceRtcGetTickResolution();
-    sceRtcGetCurrentTick(&last_tick);
-    ticks_per_upd = ticks_per_sec / UiMetric.MenuFps;
 
     /* Begin navigation (inner) loop */
     while (!ExitPSP)
@@ -791,26 +795,21 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
       sceGuStart(GU_CALL, call_list);
 
       /* Draw current path */
-      pspVideoPrint(UiMetric.Font, sx, UiMetric.Top, cur_path, 
+      pspVideoPrint(UiMetric.Font, sx, UiMetric.Top, cur_path,
         UiMetric.TitleColor);
       pspVideoDrawLine(UiMetric.Left, UiMetric.Top + fh - 1, UiMetric.Left + w, 
         UiMetric.Top + fh - 1, UiMetric.TitleColor);
 
-      /* Draw instructions */
-      strcpy(instr, BrowserCancelTemplate);
-      if (sel)
-      {
-        strcat(instr, "\t");
-        strcat(instr, (is_dir) ? BrowserEnterDirTemplate : BrowserOpenTemplate);
-      }
+      const char *instruction;
       if (hasparent)
-      {
-        strcat(instr, "\t");
-        strcat(instr, BrowserParentDirTemplate);
-      }
-      ReplaceIcons(instr);
-      pspVideoPrintCenter(UiMetric.Font, 
-        sx, SCR_HEIGHT - fh, dx, instr, UiMetric.StatusBarColor);
+        instruction = instructions[(is_dir)
+          ? BrowserTemplateEnter : BrowserTemplateOpen];
+      else
+        instruction = instructions[(is_dir)
+          ? BrowserTemplateEnterTop : BrowserTemplateOpenTop];
+      
+      pspVideoPrintCenter(UiMetric.Font,
+        sx, SCR_HEIGHT - fh, dx, instruction, UiMetric.StatusBarColor);
 
       /* Draw scrollbar */
       if (sbh > 0)
@@ -831,9 +830,9 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
         pspVideoPrintClipped(UiMetric.Font, sx + 10, j, item->Caption, w - 10, 
           "...", (item == sel) ? UiMetric.SelectedColor
-            : ((unsigned int)item->Param & PSP_FILEIO_DIR) 
+            : ((unsigned int)item->Param & PSP_FILEIO_DIR)
             ? UiMetric.BrowserDirectoryColor : UiMetric.BrowserFileColor);
-      }
+     }
 
       /* Render status information */
       RenderStatus();
@@ -844,7 +843,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
       sceGuFinish();
 
-      if (sel != last_sel && !fast_scroll && sel && last_sel 
+      if (sel != last_sel && !fast_scroll && sel && last_sel
         && UiMetric.Animate)
       {
         /* Move animation */
@@ -888,11 +887,6 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
       pspVideoEnd();
 
-      /* Wait if needed */
-      do { sceRtcGetCurrentTick(&current_tick); }
-      while (current_tick - last_tick < ticks_per_upd);
-      last_tick = current_tick;
-
       /* Swap buffers */
       pspVideoWaitVSync();
       pspVideoSwapBuffers();
@@ -904,10 +898,12 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
 
 exit_browser:
 
-  pspMenuDestroy(menu);
+  /* Free instruction strings */
+  for (i = 0; i < BROWSER_TEMPLATE_COUNT; i++)
+    free(instructions[i]);
 
+  pspMenuDestroy(menu);
   free(cur_path);
-  free(instr);
 }
 
 void pspUiOpenGallery(const PspUiGallery *gallery, const char *title)

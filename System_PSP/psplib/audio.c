@@ -32,6 +32,7 @@ typedef struct {
   void *Userdata;
 } ChannelInfo;
 
+static int DirectHandle;
 static ChannelInfo AudioStatus[AUDIO_CHANNELS];
 static short *AudioBuffer[AUDIO_CHANNELS][2];
 
@@ -46,6 +47,7 @@ int pspAudioInit(int sample_count)
 
   StopAudio = 0;
   AudioReady = 0;
+  DirectHandle = -1;
 
   for (i = 0; i < AUDIO_CHANNELS; i++)
   {
@@ -60,11 +62,19 @@ int pspAudioInit(int sample_count)
       AudioBuffer[i][j] = NULL;
   }
 
-  if ((SampleCount = sample_count) <= 0)
-    SampleCount = DEFAULT_SAMPLE_COUNT;
+  DirectHandle = sceAudioChReserve(PSP_AUDIO_NEXT_CHANNEL, 
+    DEFAULT_SAMPLE_COUNT, PSP_AUDIO_FORMAT_STEREO);
 
+  /* No callback */
+  if ((SampleCount = sample_count) == 0)
+    return 1;
+
+  /* Check sample count */
+  if ((SampleCount = sample_count) < 0)
+    SampleCount = DEFAULT_SAMPLE_COUNT;
   SampleCount = PSP_AUDIO_SAMPLE_ALIGN(SampleCount);
 
+  /* Initialize buffers */
   for (i = 0; i < AUDIO_CHANNELS; i++)
   {
     for (j = 0; j < 2; j++)
@@ -76,7 +86,8 @@ int pspAudioInit(int sample_count)
       }
     }
   }
-  
+
+  /* Initialize channels */
   for (i = 0, failed = 0; i < AUDIO_CHANNELS; i++)
   {
     AudioStatus[i].Handle = sceAudioChReserve(PSP_AUDIO_NEXT_CHANNEL, 
@@ -89,6 +100,10 @@ int pspAudioInit(int sample_count)
     }
   }
 
+  if (!failed)
+	  DirectHandle = sceAudioChReserve(PSP_AUDIO_NEXT_CHANNEL, 
+	    SampleCount, PSP_AUDIO_FORMAT_STEREO);
+
   if (failed)
   {
     for (i = 0; i < AUDIO_CHANNELS; i++)
@@ -99,6 +114,9 @@ int pspAudioInit(int sample_count)
         AudioStatus[i].Handle = -1;
       }
     }
+
+    if (DirectHandle != -1)
+      sceAudioChRelease(DirectHandle);
 
     FreeBuffers();
     return 0;
@@ -178,6 +196,12 @@ void pspAudioShutdown()
     }
   }
 
+  if (DirectHandle != -1)
+  {
+    sceAudioChRelease(DirectHandle);
+    DirectHandle = -1;
+  }
+
   FreeBuffers();
 }
 
@@ -219,10 +243,22 @@ static int AudioChannelThread(int args, void *argp)
   return 0;
 }
 
-int pspAudioOutputBlocking(unsigned int channel, void *buf)
+int pspAudioOutputBlocking(void *buf, unsigned int length)
 {
-  return OutputBlocking(channel, AudioStatus[channel].LeftVolume,
-    AudioStatus[channel].RightVolume, buf, SampleCount);
+  if (DirectHandle < 0) return -1;
+
+  sceAudioSetChannelDataLen(DirectHandle, length);
+  return sceAudioOutputPannedBlocking(DirectHandle, PSP_AUDIO_MAX_VOLUME, 
+    PSP_AUDIO_MAX_VOLUME, buf);
+}
+
+int pspAudioOutput(void *buf, unsigned int length)
+{
+  if (DirectHandle < 0) return -1;
+
+  sceAudioSetChannelDataLen(DirectHandle, length);
+  return sceAudioOutputPanned(DirectHandle, PSP_AUDIO_MAX_VOLUME, 
+    PSP_AUDIO_MAX_VOLUME, buf);
 }
 
 static int OutputBlocking(unsigned int channel,

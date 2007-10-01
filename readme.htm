@@ -1,15 +1,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html><head>
-
-    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-2">
-    <meta name="keywords" content="akop, karapetyan, psp, neogeo, neopop, neo, geo, snk, pocket, color, neopoppsp">
-    <meta name="author" content="Akop Karapetyan">
-    <meta name="description" content="NeoGeo Pocket and Pocket Color emulator for PlayStation Portable"><title>NeoPop PSP Readme</title>
-    
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-2"/>
+    <meta name="keywords" content="akop, karapetyan, psp, playstation, play, station, portable, emulator, emulation, emulate, neogeo, neopop, neo, geo, snk, pocket, color, neopoppsp"/>
+    <meta name="author" content="Akop Karapetyan"/>
+    <meta name="description" content=""/>
+    <title>NeoPop PSP</title>
     <style type="text/css">
       body
       {
-        margin: 0;
+        margin: 1em;
         font-family: sans-serif;
         font-size: 10pt;
         background-color: #fbfaf4;
@@ -17,41 +17,15 @@
 
       #content
       {
+        background-color: #ffffff;
         padding: 2em 2em 2em 2em;
-        margin-left: 5em;
-        border-left: dotted 1px #000000;
-      }
-            
-      h1
-      {
-        font-size: 14pt;
-      }
-      
-      h2
-      {
-        font-size: 12pt;
-      }
-      
-      span.button
-      {
-        font-size: 1.25em;
-        font-family: monospace;
-      }
-      
-      span.file
-      {
-        font-family: monospace;
+        margin: 4em 4em 0.5em 4em;
+        border: solid 1px #aaaaaa;
       }
 
-      div.indent
+      #header 
       {
-        font-family: monospace;
-        margin-left: 1.5em;
-      }
-      
-      div.section
-      {
-        margin: 1.5em;
+        border-bottom: solid 1px #cccccc;
       }
 
       #title
@@ -60,161 +34,224 @@
         font-family: serif;
         font-size: 24pt;
       }
-      
+
       #byline
       {
         font-family: serif;
-        font-size: 13pt;
+        font-size: 10pt;
+        font-style: oblique;
+      }
+
+      #authors
+      {
+        font-size: 9pt;
+        font-style: oblique;
+      }
+                  
+      h1
+      {
+        font-size: 14pt;
+      }
+
+      h2
+      {
+        font-size: 12pt;
+      }
+
+      h4
+      {
+        margin-left: 1em;
+      }
+      
+      #introduction 
+      {
         font-style: oblique;
       }
       
-      .no-bullets
+      #footer
       {
-        list-style: none;
+        font-style: oblique;
+        margin-left: 4em;
       }
-    </style></head><body>
+      
+      table
+      {
+        margin-left: 2em;
+      }
+      
+      table td
+      {
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+      
+      table td:first-child
+      {
+        font-style: oblique;
+      }
+      
+      a
+      {
+        color: #5C3317;
+      }
+      
+      p
+      {
+        margin-left: 1em;
+      }
 
+      #top p
+      {
+        margin-left: 0;
+      }
+    </style>
+  </head>
+  <body>
     <div id="content">
-      <div id="title">NeoPop PSP</div>
-      <div id="byline">NeoGeo Pocket and Pocket Color emulator for PlayStation Portable</div>
 
-      <p><a href="http://psp.akop.org/smsplus">http://psp.akop.org/neopop</a></p>
-
-      <p>
-        &#169; 2007 Akop Karapetyan (port)<br>
-        &#169; 2002 neopop_uk (emulation)<br>
-      </p>
-
-      <p>NeoPop PSP is a port of the <a href="http://neopop.emuxhaven.net/">NeoPop
-        emulator</a> to the Sony PlayStation Portable platform. It's written in
-        C and uses GU (Graphical Utility toolkit) for rendering.</p>
-
-      <h1 id="toc">Table of Contents</h1>
-      <div class="section">
-        <ol>
-          <li><a href="#news">New Features</a></li>
-          <li><a href="#install">Installation</a></li>
-          <li><a href="#controls">Controls</a></li>
-          <li><a href="#issues">Known Issues</a></li>
-          <li><a href="#compile">Compiling</a></li>
-          <li><a href="#hist">Version history</a></li>
-          <li><a href="#cred">Credits</a></li>
-        </ol>
+      <div id="header">
+        <div id="title">NeoPop PSP</div>
+        <div id="byline">NeoGeo Pocket and Pocket Color emulator for Playstation Portable</div>
       </div>
 
-      <h1 id="news">New Features</h1>
-      <div class="section">
-        <h2>Version 0.71.1 (<B>WHEN</b>)</h2>
-        <ul>
-          <li>Initial release</li>
-        </ul>
+      <div id="top">
+        <p><a href="http://psp.akop.org/neopop">http://psp.akop.org/neopop</a></p>
+        <div id="authors"><p>(C) 2007 Akop Karapetyan (port)<br/>
+(C) 2002 neopop_uk (emulation)</p></div>
+        <div id="introduction">
+          <p><strong>NeoPop <span class="caps">PSP</span></strong> is a port of the <a href="http://neopop.emuxhaven.net/">NeoPop emulator</a> to the Sony PlayStation Portable platform. It&#8217;s written in C and uses GU (Graphical Utility toolkit) for rendering.</p>
+        </div>
       </div>
 
-      <h1 id="install">Installation</h1>
-      <div class="section">
-        <p>Unzip neopop.zip into /PSP/GAME/ folder on the memory stick. This
-          should create the following directory tree:</p>
+      <h2>Table of Contents</h2>
+      <ol>
+        <li><a href="#NewFeatures">New Features</a></li>
+        <li><a href="#Installation">Installation</a></li>
+        <li><a href="#Controls">Controls</a></li>
+        <li><a href="#KnownIssues">Known Issues</a></li>
+        <li><a href="#Compiling">Compiling</a></li>
+        <li><a href="#VersionHistory">Version History</a></li>
+        <li><a href="#Credits">Credits</a></li>
+      </ol>
 
-          <div class="indent">PSP/
-            <div class="indent">GAME/
-              <div class="indent">NEOPOPPSP/
-                <div class="indent">GAMES/ (<i>game roms</i>)</div>
-                <div class="indent">SCREENS/ (<i>screenshots</i>)</div>
-                <div class="indent">SAVEDATA/ (<i>save states and flash data</i>)</div>
-                <div class="indent">BUTTONS.CNF (<i>Button configuration file</i>)</div>
-                <div class="indent">[any other files]</div>
-              </div>
-              <div class="indent">NEOPOPPSP%/
-                <div class="indent">EBOOT.PBP</div>
-              </div>
-            </div>
-          </div>
+      <h2 id="NewFeatures">New Features</h2>
 
-        <p>Game ROM's may reside anywhere (the GAMES subdirectory is recommended,
-          but not necessary). NeoPop PSP supports ROM loading from ZIP files.</p>
-      </div>
 
-      <h1 id="controls">Controls</h1>
-      <div class="section">
-        <p>The emulator currently "ships" with the following default key mappings:</p>
+	<h4>Version 0.71.15 (September 30 2007)</h4>
 
-        During emulation:
 
-        <ul>
-          <li>Analog stick - Directional pad up/down/left/right</li>
-          <li>Directional pad - Directional pad up/down/left/right</li>
-          <li><span class="button">&#9633;</span> (square) - Button B</li>
-          <li><span class="button">&#10005;</span> (cross) - Button A</li>
-          <li><span class="button">SELECT</span> - Option</li>
-          <li><span class="button">L</span> +
-            <span class="button">R</span> - Return to the emulator menu</li>
-        </ul>
+	<ul>
+	<li>Fixed a serious crash caused by having many long filenames in the same directory</li>
+	</ul>
 
-        <p>By default, button
-          configuration changes are not retained after button mapping is modified. 
-          To save changes, press <span class="button">&#9675;</span> (circle)
-          after desired mapping is configured. To load
-          the default mapping press <span class="button">&#9651;</span>
-          (triangle).</p>
-      </div>
 
-      <h1 id="issues">Known Issues</h1>
-      <div class="section">
-        <ul>
-          <li>There are a number of bugs that are emulation-related and will not
-            be fixed unless someone else fixes them. See the
-            <a href="http://neopop.emuxhaven.net/">official homepage</a> for a list
-            of bugs (including missing audio in Sonic Pocket Adventure).</li>
-          <li>DAC audio playback is currently not implemented. This is most noticeable in the
-            absence of the usual 'Se-ga!' voice at the beginning of the Sonic Pocket
-            Adventure. If enough people are interested, support may be added in the
-            future (it's mostly missing because the emulator is already slow).</li>
-          <li>Enabling the frame limiter seems to slow down the emulation unnecessarily.
-              For now, keep it turned off.</li>
-          <li>Music playback seems to be lagging in comparison to video&mdash;this is
-            hard to confirm, since the emulator never reaches 60fps with sound,
-            making it is impossible to test it at full framerate.</li>
-          <li>If you have any comments, please contact me.</li>
-        </ul>
-      </div>
+	<h2 id="Installation">Installation</h2>
 
-      <h1 id="compile">Compiling</h1>
-      <div class="section">
-        <p>Emulator's source code is only available via a Subversion
-        (SVN) repository. To check out a particular version, run</p>
 
-        <p><code>svn co http://svn.akop.org/psp/tags/neopop/<i>version</i></code></p>
+	<p>Unzip neopop.zip into /PSP/GAME/ folder on the memory stick.</p>
 
-        <p>where <i>version</i> is the release version (for example, 1.2.1). Note that
-        for this to work, you need to have Subversion installed.</p>
 
-        <div>To compile the emulator, you will need
-        <a href="svn://svn.pspdev.org/psp/trunk/zlib">zlib</a> (svn://) and
-        <a href="svn://svn.pspdev.org/psp/trunk/libpng">libpng</a> (svn://).</div>
-      </div>
+	<p>Game <span class="caps">ROM</span>&#8217;s may reside anywhere (the <span class="caps">GAMES</span> subdirectory is recommended, but not necessary). NeoPop <span class="caps">PSP</span> supports <span class="caps">ROM</span> loading from <span class="caps">ZIP</span> files.</p>
 
-      <h1 id="hist">Version History</h1>
 
-      <h1 id="cred">Credits</h1>
-      <div class="section">
-        <ul class="no-bullets">
-          <li>neopop_uk - NeoPop</li>
-          <li>PSMonkey - bug fixes that prevented NeoPop from running
-              on a RISC platform</li>
-        </ul>
-      </div>
+	<h2 id="Controls">Controls</h2>
 
-      <h1 id="cred">Thanks</h1>
-      <div class="section">
-        <ul class="no-bullets">
-          <li>PSMonkey - for making it possible to run the emulator on PSP.
-              Without his work, this version of NeoPop would not have existed</li>
-        </ul>
-      </div>
 
-     <hr>
+	<p>The emulator currently comes with the following default key mappings:</p>
 
-      <i>Akop Karapetyan, 2007</i>
+
+	<p>During emulation:</p>
+
+
+	<table>
+		<tr>
+			<td> Analog stick </td>
+			<td> Directional pad up/down/left/right </td>
+		</tr>
+		<tr>
+			<td> Directional pad </td>
+			<td> Directional pad up/down/left/right </td>
+		</tr>
+		<tr>
+			<td> [ ] (square) </td>
+			<td> Button A </td>
+		</tr>
+		<tr>
+			<td> X (cross) </td>
+			<td> Button B </td>
+		</tr>
+		<tr>
+			<td> Select </td>
+			<td> Option </td>
+		</tr>
+		<tr>
+			<td> [L] + [R] </td>
+			<td> Return to the emulator menu </td>
+		</tr>
+	</table>
+
+
+
+
+	<p>By default, button configuration changes are not retained after button mapping is modified. To save changes, press X (cross) after desired mapping is configured. To load the default mapping press ^ (triangle).</p>
+
+
+	<h2 id="KnownIssues">Known Issues</h2>
+
+
+	<ul>
+	<li>There are a number of bugs that are emulation-related and will not be fixed unless someone else fixes them. See the official homepage for a list of bugs (including missing audio in Sonic Pocket Adventure).</li>
+		<li><span class="caps">DAC</span> audio playback is currently not implemented. This is most noticeable in the absence of the usual &#8216;Se-ga!&#8217; voice at the beginning of the Sonic Pocket Adventure. If enough people are interested, support may be added in the future (it&#8217;s mostly missing because the emulator is already slow).</li>
+		<li>Enabling the frame limiter seems to slow down the emulation unnecessarily. For now, keep it turned off.</li>
+		<li>Music playback seems to be lagging in comparison to video&#8212;this is hard to confirm, since the emulator never reaches 60fps with sound, making it is impossible to test it at full framerate.</li>
+		<li>If you have any comments, please contact me.</li>
+	</ul>
+
+
+	<h2 id="Compiling">Compiling</h2>
+
+
+	<p>Emulator&#8217;s source code is only available via a Subversion (SVN) repository. To check out a particular version, run</p>
+
+
+	<p><code>svn co http://svn.akop.org/psp/tags/neopop/version</code></p>
+
+
+	<p>where <em>version</em> is the release version (for example, 1.2.1). Note that for this to work, you need to have Subversion installed.</p>
+
+
+	<p>To compile the emulator, you will need <a href="svn://svn.pspdev.org/psp/trunk/zlib">zlib</a> (svn://) and <a href="svn://svn.pspdev.org/psp/trunk/libpng">libpng</a> (svn://).</p>
+
+
+	<h2 id="VersionHistory">Version History</h2>
+
+
+	<h4>0.71.1 (September 18 2007)</h4>
+
+
+	<ul>
+	<li>Initial release</li>
+	</ul>
+
+
+	<h2 id="Credits">Credits</h2>
+
+
+	<table>
+		<tr>
+			<td> <em>neopop_uk</em> </td>
+			<td> NeoPop </td>
+		</tr>
+		<tr>
+			<td> <em>PSMonkey</em> </td>
+			<td> bug fixes that prevented NeoPop from running on a <span class="caps">RISC</span> platform </td>
+		</tr>
+	</table>
+
     </div>
-  
-</body></html>
+
+    <div id="footer">Akop Karapetyan, 2007</div>
+
+  </body>
+</html>
+
